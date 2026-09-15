@@ -1,0 +1,9 @@
+
+## Kiinduló prompt
+
+> Készíts egy reszponzív, magyar nyelvű React + TypeScript + Vite prototípust kitalált tranzakciók, kategóriák és költségkeretek követéséhez. Lehessen új kiadás és kategória szerinti összeget felvenni egy tranzakciólistába. Az adat maradjon meg oldalfrissítés után localStorage használatával. Ne készíts backendet vagy valódi bejelentkezést.
+
+Indítás:
+
+npm install
+npm run dev
