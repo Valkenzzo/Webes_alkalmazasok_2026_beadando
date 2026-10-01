@@ -7,3 +7,17 @@ Indítás:
 
 npm install
 npm run dev
+
+## Refaktor napló
+
+### 2026-10-01
+- A korábban egyetlen fájlban lévő alkalmazást külön App, komponens, domainadat-, típus- és tárolási modulokra bontottam.
+- A localStorage betöltése most ellenőrzi a JSON szerkezetét és a tranzakció/kategória/keret mezőit; hibás vagy hiányos adat esetén használható kezdőadatokat ad.
+- A tárolási hibák nem állítják le az alkalmazást, így a felület memóriában tovább használható.
+- Az űrlapok natív validációt, szöveg-hosszhatárt és trimelt adatfelvitelt kaptak; a modális Escape billentyűvel és bezáró gombbal is bezárható.
+- A dátum alapértéke helyi dátumból készül, a tranzakció dátumának megjelenítése pedig elkerüli az UTC miatti előző napra csúszást.
+- A navigáció szemantikusabb lett, az aktív oldal jelölést kapott, a még nem működő Beállítások elem pedig letiltott állapotú.
+- Az HTML dokumentum magyar nyelvet, reszponzív viewportot, leírást és FinTrack címet kapott.
+- A README kiegészült a forrásfájlok szerepének rövid áttekintésével.
+- A projekt fejlesztői függőségei kiegészültek a React típuscsomagokkal, a Vite környezeti típusdeklaráció pedig lehetővé teszi a CSS-import TypeScript-ellenőrzését.
+- Ellenőrzés: `npm run build` sikeres (TypeScript és Vite production build).
