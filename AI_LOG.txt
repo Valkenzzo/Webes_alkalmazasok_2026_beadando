@@ -21,3 +21,23 @@ npm run dev
 - A README kiegészült a forrásfájlok szerepének rövid áttekintésével.
 - A projekt fejlesztői függőségei kiegészültek a React típuscsomagokkal, a Vite környezeti típusdeklaráció pedig lehetővé teszi a CSS-import TypeScript-ellenőrzését.
 - Ellenőrzés: `npm run build` sikeres (TypeScript és Vite production build).
+
+## Backend implementációs napló
+
+### 2026-10-09
+- Külön .NET 10 ASP.NET Core Minimal API projekt készült EF Core és Npgsql használatával, PostgreSQL-adatbázishoz.
+- Elkészült a kategória-, tranzakció- és költségkeret-adatmodell, kategóriaidegen kulcsokkal; migráció kezdeti sémával és hat alap-kategóriával, négy havi kerettel.
+- API-végpontok készültek a tranzakciók és kategóriák listázására/létrehozására, kategóriák idempotens importjára, valamint költségkeretek lekérésére és módosítására.
+- A frontend már API-ból tölti az adatokat; mentési hiba esetén nem frissül sikeresnek látszó állapotra. A költségkeretek szerkeszthetők.
+- A korábbi localStorage-kategóriák egyszer importálódnak, a korábbi tranzakciók nem kerülnek át.
+- A Vite `/api` proxy, PostgreSQL indítási útmutató és ASP.NET fejlesztői indítóscript elkészült.
+- Ellenőrzés: `dotnet build`, `npm run build` és az EF `InitialCreate` migráció generálása sikeres.
+- HTTP füstpróba: a frontend 200 választ adott, a Vite proxyn keresztüli API health `ok`, a hibás tranzakciókérés 400 választ kapott.
+- Az adatbázis-migráció tényleges futtatása és a sikeres DB-olvasás/írás ellenőrzése nem volt lehetséges, mert nincs helyi PostgreSQL-szolgáltatás vagy Docker a környezetben.
+
+### Helyi PostgreSQL bekötés – 2026-10-09
+- A PostgreSQL 18 szolgáltatás elérhetővé vált, a `fintrack` adatbázishoz tartozó kapcsolat a .NET User Secrets tárolóba került; jelszó nem került forrásfájlba.
+- Az `InitialCreate` migráció sikeresen lefutott, és az EF migrációlistája alkalmazottnak jelzi.
+- PostgreSQL-en ellenőrizve: hat kategória, négy költségkeret; a keret frissítése és visszaolvasása sikeres.
+- Kategória és tranzakció API POST/GET próbája sikeres volt; az ideiglenes próbasorokat eltávolítottam.
+- A Vite proxyn át a health `ok`, az alapadatok betöltődnek; a fejlesztői API és frontend szerver fut.

@@ -1,0 +1,6 @@
+node_modules/
+backend/**/bin/
+backend/**/obj/
+backend/**/Properties/PublishProfiles/
+*.user
+*.suo

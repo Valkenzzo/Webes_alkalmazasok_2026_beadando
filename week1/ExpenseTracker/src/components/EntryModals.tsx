@@ -6,19 +6,29 @@ import type { Category } from '../types';
 export function TransactionModal({ categories, onClose, onAdd }: {
   categories: Category[];
   onClose: () => void;
-  onAdd: (title: string, categoryId: string, amount: number, date: string) => void;
+  onAdd: (title: string, categoryId: string, amount: number, date: string) => Promise<void>;
 }) {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(getLocalDateString());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedTitle = title.trim();
     const value = Number(amount);
     if (!normalizedTitle || !categoryId || !Number.isFinite(value) || value <= 0) return;
-    onAdd(normalizedTitle, categoryId, value, date);
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await onAdd(normalizedTitle, categoryId, value, date);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'A kiadás mentése nem sikerült.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -30,7 +40,8 @@ export function TransactionModal({ categories, onClose, onAdd }: {
         </select></label>
         <label>Összeg (Ft)<input type="number" min="1" step="1" required value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0" /></label>
         <label>Dátum<input type="date" required value={date} onChange={(event) => setDate(event.target.value)} /></label>
-        <button className="primary wide" disabled={!categories.length || !title.trim() || Number(amount) <= 0} type="submit">Kiadás mentése</button>
+        {error && <p className="inline-error" role="alert">{error}</p>}
+        <button className="primary wide" disabled={isSubmitting || !categories.length || !title.trim() || Number(amount) <= 0} type="submit">{isSubmitting ? 'Mentés…' : 'Kiadás mentése'}</button>
       </form>
     </Modal>
   );
@@ -38,16 +49,27 @@ export function TransactionModal({ categories, onClose, onAdd }: {
 
 export function CategoryModal({ onClose, onAdd }: {
   onClose: () => void;
-  onAdd: (name: string, color: string) => void;
+  onAdd: (name: string, color: string) => Promise<void>;
 }) {
   const [name, setName] = useState('');
   const [color, setColor] = useState('#2974A6');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const colors = ['#2974A6', '#f59e0b', '#10b981', '#ec4899', '#6366f1', '#ef4444'];
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedName = name.trim();
-    if (normalizedName) onAdd(normalizedName, color);
+    if (!normalizedName) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await onAdd(normalizedName, color);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'A kategória mentése nem sikerült.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -67,7 +89,8 @@ export function CategoryModal({ onClose, onAdd }: {
             />
           ))}
         </div></label>
-        <button className="primary wide" disabled={!name.trim()} type="submit">Kategória létrehozása</button>
+        {error && <p className="inline-error" role="alert">{error}</p>}
+        <button className="primary wide" disabled={isSubmitting || !name.trim()} type="submit">{isSubmitting ? 'Mentés…' : 'Kategória létrehozása'}</button>
       </form>
     </Modal>
   );

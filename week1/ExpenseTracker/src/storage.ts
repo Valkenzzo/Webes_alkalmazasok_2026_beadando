@@ -1,5 +1,7 @@
-import { initialBudgets, initialCategories, initialTransactions, storageKey } from './data';
-import type { Budget, Category, FinanceData, Transaction } from './types';
+import { storageKey } from './data';
+import type { Category } from './types';
+
+const categoryImportKey = `${storageKey}-categories-imported-v1`;
 
 function isCategory(value: unknown): value is Category {
   if (!value || typeof value !== 'object') return false;
@@ -9,62 +11,31 @@ function isCategory(value: unknown): value is Category {
     && typeof category.color === 'string';
 }
 
-function isTransaction(value: unknown): value is Transaction {
-  if (!value || typeof value !== 'object') return false;
-  const transaction = value as Transaction;
-  return typeof transaction.id === 'string'
-    && typeof transaction.title === 'string'
-    && typeof transaction.categoryId === 'string'
-    && Number.isFinite(transaction.amount)
-    && transaction.amount > 0
-    && typeof transaction.date === 'string';
-}
-
-function isBudget(value: unknown): value is Budget {
-  if (!value || typeof value !== 'object') return false;
-  const budget = value as Budget;
-  return typeof budget.categoryId === 'string'
-    && Number.isFinite(budget.limit)
-    && budget.limit > 0;
-}
-
-export function loadFinanceData(): FinanceData {
+export function loadLegacyCategories(): Category[] {
   try {
     const stored = localStorage.getItem(storageKey);
-    if (!stored) return createInitialData();
-
+    if (!stored) return [];
     const parsed: unknown = JSON.parse(stored);
-    if (!parsed || typeof parsed !== 'object') return createInitialData();
-
-    const data = parsed as Partial<FinanceData>;
-    return {
-      transactions: Array.isArray(data.transactions)
-        ? data.transactions.filter(isTransaction)
-        : [...initialTransactions],
-      categories: Array.isArray(data.categories)
-        ? data.categories.filter(isCategory)
-        : [...initialCategories],
-      budgets: Array.isArray(data.budgets)
-        ? data.budgets.filter(isBudget)
-        : [...initialBudgets],
-    };
+    if (!parsed || typeof parsed !== 'object') return [];
+    const categories = (parsed as { categories?: unknown }).categories;
+    return Array.isArray(categories) ? categories.filter(isCategory) : [];
   } catch {
-    return createInitialData();
+    return [];
   }
 }
 
-export function saveFinanceData(data: FinanceData) {
+export function hasImportedLegacyCategories() {
   try {
-    localStorage.setItem(storageKey, JSON.stringify(data));
+    return localStorage.getItem(categoryImportKey) === 'true';
   } catch {
-    // Storage can be unavailable or full; the in-memory app remains usable.
+    return false;
   }
 }
 
-function createInitialData(): FinanceData {
-  return {
-    transactions: [...initialTransactions],
-    categories: [...initialCategories],
-    budgets: [...initialBudgets],
+export function markLegacyCategoriesImported() {
+  try {
+    localStorage.setItem(categoryImportKey, 'true');
+  } catch {
+    // The import endpoint is idempotent if browser storage is unavailable.
   };
 }

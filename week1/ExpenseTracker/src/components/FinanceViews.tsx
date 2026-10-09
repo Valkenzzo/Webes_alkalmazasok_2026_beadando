@@ -1,4 +1,5 @@
-import { ArrowDownLeft, Plus, Tags } from 'lucide-react';
+import { ArrowDownLeft, Check, Pencil, Plus, Tags, X } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
 import { currency, getCategoryTotal } from '../data';
 import type { Budget, Category, PageId, Transaction } from '../types';
 
@@ -127,10 +128,11 @@ export function CategoriesView({ categories, transactions, onAdd }: {
   );
 }
 
-export function BudgetsView({ budgets, categories, transactions }: {
+export function BudgetsView({ budgets, categories, transactions, onSave }: {
   budgets: Budget[];
   categories: Category[];
   transactions: Transaction[];
+  onSave: (categoryId: string, limit: number) => Promise<void>;
 }) {
   return (
     <section className="card full">
@@ -138,16 +140,14 @@ export function BudgetsView({ budgets, categories, transactions }: {
       {budgets.map((budget) => {
         const category = categories.find((item) => item.id === budget.categoryId);
         const used = getCategoryTotal(transactions, budget.categoryId);
-        const percentage = Math.round(used / budget.limit * 100);
         return (
-          <div className="budget big" key={budget.categoryId}>
-            <div className="budget-top">
-              <div><span className="dot" style={{ background: category?.color }} /><b>{category?.name ?? 'Ismeretlen kategória'}</b></div>
-              <strong>{percentage}%</strong>
-            </div>
-            <div className="bar-bg"><div className="bar" style={{ width: `${Math.min(100, percentage)}%`, background: category?.color }} /></div>
-            <div className="budget-meta"><span>Elköltve: {currency.format(used)}</span><span>Keret: {currency.format(budget.limit)}</span></div>
-          </div>
+          <BudgetEditor
+            budget={budget}
+            category={category}
+            key={budget.categoryId}
+            onSave={onSave}
+            used={used}
+          />
         );
       })}
     </section>
@@ -175,6 +175,75 @@ function TransactionList({ transactions, categories }: { transactions: Transacti
         );
       })}
       {!transactions.length && <div className="empty">Nincs ilyen kategóriájú tranzakció.</div>}
+    </div>
+  );
+}
+
+function BudgetEditor({ budget, category, used, onSave }: {
+  budget: Budget;
+  category: Category | undefined;
+  used: number;
+  onSave: (categoryId: string, limit: number) => Promise<void>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [limitInput, setLimitInput] = useState(String(budget.limit));
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const percentage = Math.round(used / budget.limit * 100);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const limit = Number(limitInput);
+    if (!Number.isFinite(limit) || limit <= 0) return;
+
+    setIsSaving(true);
+    setError(null);
+    try {
+      await onSave(budget.categoryId, limit);
+      setIsEditing(false);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'A keret mentése nem sikerült.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function cancelEdit() {
+    setLimitInput(String(budget.limit));
+    setError(null);
+    setIsEditing(false);
+  }
+
+  return (
+    <div className="budget big">
+      <div className="budget-top">
+        <div><span className="dot" style={{ background: category?.color }} /><b>{category?.name ?? 'Ismeretlen kategória'}</b></div>
+        <div className="budget-actions">
+          <strong>{percentage}%</strong>
+          {!isEditing && <button aria-label={`Keret szerkesztése: ${category?.name ?? ''}`} className="icon-button" onClick={() => setIsEditing(true)} type="button"><Pencil size={16} /></button>}
+        </div>
+      </div>
+      <div className="bar-bg"><div className="bar" style={{ width: `${Math.min(100, percentage)}%`, background: category?.color }} /></div>
+      <div className="budget-meta"><span>Elköltve: {currency.format(used)}</span><span>Keret: {currency.format(budget.limit)}</span></div>
+      {isEditing && (
+        <form className="budget-edit" onSubmit={submit}>
+          <label htmlFor={`budget-${budget.categoryId}`}>Havi keret (Ft)</label>
+          <input
+            id={`budget-${budget.categoryId}`}
+            max="1000000000"
+            min="1"
+            onChange={(event) => setLimitInput(event.target.value)}
+            required
+            step="1"
+            type="number"
+            value={limitInput}
+          />
+          <button aria-label="Keret mentése" className="icon-button" disabled={isSaving || Number(limitInput) <= 0} type="submit"><Check size={17} /></button>
+          <button aria-label="Szerkesztés megszakítása" className="icon-button" disabled={isSaving} onClick={cancelEdit} type="button"><X size={17} /></button>
+          {isSaving && <span role="status">Mentés…</span>}
+          {error && <span className="inline-error" role="alert">{error}</span>}
+        </form>
+      )}
     </div>
   );
 }
