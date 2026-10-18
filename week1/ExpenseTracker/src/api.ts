@@ -47,11 +47,33 @@ export function importCategories(categories: Category[]) {
   });
 }
 
-export function createTransaction(transaction: Omit<Transaction, 'id'>) {
-  return request<Transaction>('/transactions', {
+type CreatedTransaction = {
+  id: string;
+  title: string;
+  categoryId: string;
+  amount: number;
+  date: string;
+};
+
+export async function createTransaction(transaction: {
+  title: string;
+  categoryId: string;
+  amount: number;
+  date: string;
+}): Promise<Transaction> {
+  const created = await request<CreatedTransaction>('/transactions', {
     method: 'POST',
     body: JSON.stringify(transaction),
   });
+
+  return {
+    id: created.id,
+    categoryId: created.categoryId,
+    amount: created.amount,
+    currency: 'HUF',
+    startedAt: `${created.date}T00:00:00.0000000Z`,
+    description: created.title,
+  };
 }
 
 export function createCategory(category: Omit<Category, 'id'>) {

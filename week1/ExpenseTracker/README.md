@@ -33,6 +33,7 @@ npm run dev
 A Vite `/api` proxyja az ASP.NET szerverre továbbítja a kéréseket. A backend külön terminálban indítható `npm run dev:api` paranccsal, ha a kapcsolat és az adatbázis már be van állítva.
 
 ## API
+- A `GET /api/transactions` részletes válaszszerződése, példái és mezőkizárásai: [TransactionsApiContract.md](backend/TransactionsApiContract.md)
 - `GET`, `POST /api/transactions`
 - `GET`, `POST /api/categories`
 - `POST /api/categories/import` a régi böngészős kategóriák egyszeri, ismételhető importjához

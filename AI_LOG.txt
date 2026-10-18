@@ -41,3 +41,11 @@ npm run dev
 - PostgreSQL-en ellenőrizve: hat kategória, négy költségkeret; a keret frissítése és visszaolvasása sikeres.
 - Kategória és tranzakció API POST/GET próbája sikeres volt; az ideiglenes próbasorokat eltávolítottam.
 - A Vite proxyn át a health `ok`, az alapadatok betöltődnek; a fejlesztői API és frontend szerver fut.
+
+## Tranzakció GET contract-first API – 2026-10-18
+- Dokumentált szerződés készült a `GET /api/transactions` útvonalhoz: `200 application/json`, UUID id, decimal amount, ISO 4217 currency, ISO 8601 UTC startedAt és description; üres lista esetén `200 []`.
+- A tranzakciólista controller/service/repository/domain rétegekre lett bontva; az EF repository domain entitásokat ad vissza, a publikus DTO mapping külön komponensben történik.
+- A controller csak a service-t hívja, csak GET műveletet deklarál, és kizárólag response DTO-kat ad vissza.
+- A meglévő kliens kategóriaszűrésének megőrzésére a `categoryId` kiegészítő response mezőként szerepel; a korábbi POST válasz és frontend adatmodell adapteren keresztül változatlanul működik.
+- Tesztek készültek több tranzakciós és üres lista esetre.
+- Ellenőrzés: backend tesztek 2/2 sikeresek, frontend production build sikeres, diagnosztika tiszta; HTTP próba `200 application/json` választ adott UTC dátummal és DTO mezőkkel.

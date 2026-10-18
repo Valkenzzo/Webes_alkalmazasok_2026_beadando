@@ -167,8 +167,8 @@ function TransactionList({ transactions, categories }: { transactions: Transacti
           <div className="tx" key={transaction.id}>
             <div className="tx-icon" style={{ background: category?.color }}><ArrowDownLeft size={17} /></div>
             <div className="tx-main">
-              <b>{transaction.title}</b>
-              <span>{category?.name ?? 'Ismeretlen kategória'} · {new Date(`${transaction.date}T00:00:00`).toLocaleDateString('hu-HU')}</span>
+              <b>{transaction.description}</b>
+              <span>{category?.name ?? 'Ismeretlen kategória'} · {new Date(transaction.startedAt).toLocaleDateString('hu-HU', { timeZone: 'UTC' })}</span>
             </div>
             <strong>-{currency.format(transaction.amount)}</strong>
           </div>

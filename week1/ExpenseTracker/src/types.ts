@@ -6,10 +6,11 @@ export type Category = {
 
 export type Transaction = {
   id: string;
-  title: string;
   categoryId: string;
   amount: number;
-  date: string;
+  currency: string;
+  startedAt: string;
+  description: string;
 };
 
 export type Budget = {

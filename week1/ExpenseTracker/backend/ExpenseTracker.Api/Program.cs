@@ -1,5 +1,8 @@
 using System.Text.RegularExpressions;
+using ExpenseTracker.Api.Application.Transactions;
+using ExpenseTracker.Api.Controllers.Mapping;
 using ExpenseTracker.Api.Data;
+using ExpenseTracker.Api.Data.Repositories;
 using ExpenseTracker.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,8 +15,12 @@ if (string.IsNullOrWhiteSpace(connectionString))
 }
 
 builder.Services.AddDbContext<FinanceDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddScoped<ITransactionRepository, EfTransactionRepository>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddControllers();
 
 var app = builder.Build();
+app.MapControllers();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 
@@ -175,23 +182,6 @@ app.MapPut("/api/budgets/{categoryId}", async (
     return Results.Ok(new BudgetResponse(budget.CategoryId, budget.Limit));
 });
 
-app.MapGet("/api/transactions", async (FinanceDbContext db, CancellationToken cancellationToken) =>
-{
-    var transactions = await db.Transactions
-        .AsNoTracking()
-        .OrderByDescending(transaction => transaction.Date)
-        .ThenByDescending(transaction => transaction.CreatedAtUtc)
-        .Select(transaction => new TransactionResponse(
-            transaction.Id,
-            transaction.Title,
-            transaction.CategoryId,
-            transaction.Amount,
-            transaction.Date))
-        .ToListAsync(cancellationToken);
-
-    return Results.Ok(transactions);
-});
-
 app.MapPost("/api/transactions", async (
     CreateTransactionRequest request,
     FinanceDbContext db,
@@ -233,7 +223,7 @@ app.MapPost("/api/transactions", async (
     db.Transactions.Add(transaction);
     await db.SaveChangesAsync(cancellationToken);
 
-    return Results.Created($"/api/transactions/{transaction.Id}", new TransactionResponse(
+    return Results.Created($"/api/transactions/{transaction.Id}", new CreateTransactionResponse(
         transaction.Id,
         transaction.Title,
         transaction.CategoryId,
@@ -252,7 +242,7 @@ public sealed record ImportCategoryRequest(string Id, string Name, string Color)
 public sealed record ImportCategoriesRequest(List<ImportCategoryRequest>? Categories);
 public sealed record BudgetResponse(string CategoryId, decimal Limit);
 public sealed record UpdateBudgetRequest(decimal Limit);
-public sealed record TransactionResponse(Guid Id, string Title, string CategoryId, decimal Amount, DateOnly Date);
+public sealed record CreateTransactionResponse(Guid Id, string Title, string CategoryId, decimal Amount, DateOnly Date);
 public sealed record CreateTransactionRequest(
     string? Title,
     string? CategoryId,
