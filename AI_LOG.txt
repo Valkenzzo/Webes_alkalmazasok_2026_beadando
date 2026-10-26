@@ -49,3 +49,13 @@ npm run dev
 - A meglévő kliens kategóriaszűrésének megőrzésére a `categoryId` kiegészítő response mezőként szerepel; a korábbi POST válasz és frontend adatmodell adapteren keresztül változatlanul működik.
 - Tesztek készültek több tranzakciós és üres lista esetre.
 - Ellenőrzés: backend tesztek 2/2 sikeresek, frontend production build sikeres, diagnosztika tiszta; HTTP próba `200 application/json` választ adott UTC dátummal és DTO mezőkkel.
+
+## AI tranzakció-kategorizálás, szerepkörök – 2026-10-26
+- JWT-bejelentkezés és két szerepkör készült (Felhasználó, Családi admin); az első admin bootstrap végponttal jön létre, a tagokat az admin hozza létre. A /api végpontok alapértelmezetten hitelesítést kérnek (fallback policy), csak a health, login, bootstrap és status nyitott.
+- OpenAI-alapú kategorizálás szigorú JSON-sémával (a categoryId csak meglévő kategória lehet vagy null), 150 tokenes kimeneti korláttal, 10 mp időkorláttal; a kulcs és a JWT-kulcs User Secretsben van.
+- A szerver újraellenőrzi a modell válaszát: nem létező kategória, alacsony bizonyosság (<0,6) vagy hibás kimenet esetén nincs előválasztás; LLM-hiba (timeout, 429, 5xx, hibás/csonka JSON, hiányzó kulcs) esetén a javaslat „nem érhető el”, a kézi könyvelés nem blokkolódik.
+- Ismeretlen kategória sosem kerül automatikusan a könyvelésbe: a felhasználó jóváhagyásra küldi, a Családi admin hagyja jóvá (név és szín szerkeszthető) vagy utasítja el. A tranzakció csak létező kategóriával menthető, a javaslat csak a kérőé és csak egyszer használható; a tranzakció rögzíti a létrehozót és a kategória forrását (kézi vagy AI-jóváhagyott).
+- Felhasználónkénti rate limit a javaslatkérésre és a bejelentkezésre; a tranzakciónév megbízhatatlan adatként kerül a promptba (prompt injection ellen).
+- Frontend: bejelentkezési képernyő, AI javaslat panel a kiadásűrlapban (elfogadás, felülbírálás, jóváhagyásra küldés), Jóváhagyások oldal csak adminnak, kijelentkezés.
+- Új EF migráció: AddAuthAndCategorySuggestions (felhasználók, javaslatok, tranzakció új mezői); a PostgreSQL-en lefutott.
+- Ellenőrzés: backend tesztek 14/14, frontend build sikeres; futó API-n token nélkül és hibás tokennel a védett végpontok 401-et adnak. Nem ellenőriztem: valós OpenAI-hívás (nincs API-kulcs megadva), bejelentkezés és admin/tag jogosultság HTTP-n (ehhez az éles adatbázisban admin fiókot kellett volna létrehozni), valamint a böngészős felület kézi végigpróbálása.

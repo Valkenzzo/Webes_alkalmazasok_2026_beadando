@@ -8,6 +8,8 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<Budget> Budgets => Set<Budget>();
+    public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<CategorySuggestion> CategorySuggestions => Set<CategorySuggestion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,10 +36,39 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
             entity.Property(transaction => transaction.CategoryId).HasMaxLength(64).IsRequired();
             entity.Property(transaction => transaction.Amount).HasPrecision(18, 2);
             entity.Property(transaction => transaction.Date).HasColumnType("date");
+            entity.Property(transaction => transaction.CategorySource).HasMaxLength(20).HasDefaultValue("Manual");
             entity.HasOne(transaction => transaction.Category)
                 .WithMany(category => category.Transactions)
                 .HasForeignKey(transaction => transaction.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AppUser>(entity =>
+        {
+            entity.HasKey(user => user.Id);
+            entity.Property(user => user.Email).HasMaxLength(254).IsRequired();
+            entity.HasIndex(user => user.Email).IsUnique();
+            entity.Property(user => user.DisplayName).HasMaxLength(60).IsRequired();
+            entity.Property(user => user.PasswordHash).IsRequired();
+            entity.Property(user => user.Role).HasConversion<string>().HasMaxLength(20);
+        });
+
+        modelBuilder.Entity<CategorySuggestion>(entity =>
+        {
+            entity.HasKey(suggestion => suggestion.Id);
+            entity.Property(suggestion => suggestion.Title).HasMaxLength(80).IsRequired();
+            entity.Property(suggestion => suggestion.Amount).HasPrecision(18, 2);
+            entity.Property(suggestion => suggestion.Outcome).HasConversion<string>().HasMaxLength(20);
+            entity.Property(suggestion => suggestion.Status).HasConversion<string>().HasMaxLength(30);
+            entity.Property(suggestion => suggestion.SuggestedCategoryId).HasMaxLength(64);
+            entity.Property(suggestion => suggestion.ProposedCategoryName).HasMaxLength(40);
+            entity.Property(suggestion => suggestion.ResolvedCategoryId).HasMaxLength(64);
+            entity.Property(suggestion => suggestion.Reason).HasMaxLength(200).IsRequired();
+            entity.HasOne(suggestion => suggestion.RequestedBy)
+                .WithMany()
+                .HasForeignKey(suggestion => suggestion.RequestedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(suggestion => suggestion.Status);
         });
 
         modelBuilder.Entity<Budget>(entity =>

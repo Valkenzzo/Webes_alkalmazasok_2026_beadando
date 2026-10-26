@@ -3,10 +3,12 @@ import { Plus } from 'lucide-react';
 import { BudgetsView, CategoriesView, DashboardView, PageHeading, TransactionsView } from './components/FinanceViews';
 import { CategoryModal, TransactionModal } from './components/EntryModals';
 import { Navigation } from './components/Navigation';
-import { createCategory, createTransaction, getFinanceData, importCategories, updateBudget } from './api';
+import { ApprovalsView } from './components/ApprovalsView';
+import { LoginView } from './components/LoginView';
+import { createCategory, createTransaction, getFinanceData, getMe, hasToken, importCategories, setToken, setUnauthorizedHandler, updateBudget } from './api';
 import { getCategorySpend } from './data';
 import { hasImportedLegacyCategories, loadLegacyCategories, markLegacyCategoriesImported } from './storage';
-import type { Category, FinanceData, PageId } from './types';
+import type { AuthUser, Category, FinanceData, PageId } from './types';
 
 export default function App() {
   const [financeData, setFinanceData] = useState<FinanceData>({ transactions: [], categories: [], budgets: [] });
@@ -16,6 +18,14 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(!hasToken());
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => setUser(null));
+    if (!hasToken()) return;
+    getMe().then(setUser).catch(() => setToken(null)).finally(() => setAuthChecked(true));
+  }, []);
 
   const categorySpend = useMemo(
     () => getCategorySpend(financeData.categories, financeData.transactions),
@@ -24,6 +34,7 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController();
+    if (!user) return;
     let isActive = true;
 
     async function loadData() {
@@ -52,10 +63,10 @@ export default function App() {
       isActive = false;
       controller.abort();
     };
-  }, [retryCount]);
+  }, [retryCount, user]);
 
-  async function addTransaction(title: string, categoryId: string, amount: number, date: string) {
-    const transaction = await createTransaction({ title, categoryId, amount, date });
+  async function addTransaction(title: string, categoryId: string, amount: number, date: string, suggestionId?: string) {
+    const transaction = await createTransaction({ title, categoryId, amount, date, suggestionId });
     setFinanceData((current) => ({ ...current, transactions: [transaction, ...current.transactions] }));
     setModal(null);
   }
@@ -74,13 +85,23 @@ export default function App() {
     }));
   }
 
+  function logout() {
+    setToken(null);
+    setUser(null);
+    setFinanceData({ transactions: [], categories: [], budgets: [] });
+    setActivePage('dashboard');
+  }
+
+  if (!authChecked) return null;
+  if (!user) return <LoginView onLoggedIn={setUser} />;
+
   const filteredTransactions = transactionFilter === 'all'
     ? financeData.transactions
     : financeData.transactions.filter((transaction) => transaction.categoryId === transactionFilter);
 
   return (
     <div className="app">
-      <Navigation activePage={activePage} onNavigate={setActivePage} />
+      <Navigation activePage={activePage} onLogout={logout} onNavigate={setActivePage} user={user} />
       <main>
         <header>
           <div><PageHeading page={activePage} /></div>
@@ -120,6 +141,11 @@ export default function App() {
             categories={financeData.categories}
             onSave={saveBudget}
             transactions={financeData.transactions}
+          />
+        )}
+        {activePage === 'approvals' && user.role === 'FamilyAdmin' && (
+          <ApprovalsView
+            onApproved={(category) => setFinanceData((current) => ({ ...current, categories: [...current.categories, category] }))}
           />
         )}
       </main>

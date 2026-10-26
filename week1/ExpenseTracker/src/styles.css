@@ -486,6 +486,14 @@ input {
     color: #263545
 }
 
+.suggestion {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 15px;
+    font-size: 12px;
+    color: #465463
+}
+
 .inline-error {
     color: #a43f31;
     font-size: 12px

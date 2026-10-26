@@ -24,4 +24,17 @@ export type FinanceData = {
   budgets: Budget[];
 };
 
-export type PageId = 'dashboard' | 'transactions' | 'categories' | 'budgets';
+export type Role = 'Member' | 'FamilyAdmin';
+export type AuthUser = { id: string; email: string; displayName: string; role: Role };
+export type SuggestionOutcome = 'Match' | 'NewCategory' | 'Uncertain' | 'Unavailable';
+export type CategorySuggestion = {
+  suggestionId: string | null;
+  outcome: SuggestionOutcome;
+  categoryId: string | null;
+  proposedCategoryName: string | null;
+  confidence: number;
+  reason: string;
+};
+export type PendingProposal = { id: string; proposedCategoryName: string; title: string; requestedBy: string };
+
+export type PageId = 'dashboard' | 'transactions' | 'categories' | 'budgets' | 'approvals';

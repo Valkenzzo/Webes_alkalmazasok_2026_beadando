@@ -18,6 +18,7 @@ export function PageHeading({ page }: { page: PageId }) {
     transactions: 'Tranzakciók',
     categories: 'Kategóriák',
     budgets: 'Költségkeretek',
+    approvals: 'Jóváhagyások',
   };
 
   return <><p className="eyebrow">PÉNZÜGYI ÁTTEKINTÉS</p><h1>{titles[page]}</h1></>;

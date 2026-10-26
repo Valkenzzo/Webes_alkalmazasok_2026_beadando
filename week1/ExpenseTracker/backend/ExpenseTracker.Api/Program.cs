@@ -1,4 +1,15 @@
+using System.Security.Claims;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.RateLimiting;
+using ExpenseTracker.Api.Application.Categorization;
+using ExpenseTracker.Api.Endpoints;
+using ExpenseTracker.Api.Infrastructure.OpenAi;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Tokens;
 using ExpenseTracker.Api.Application.Transactions;
 using ExpenseTracker.Api.Controllers.Mapping;
 using ExpenseTracker.Api.Data;
@@ -17,12 +28,53 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddDbContext<FinanceDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddScoped<ITransactionRepository, EfTransactionRepository>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+var signingKey = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(signingKey) || signingKey.Length < 32)
+{
+    throw new InvalidOperationException("Jwt:SigningKey (legalább 32 karakter) hiányzik. Állítsd be User Secretsben.");
+}
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.MapInboundClaims = false;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidIssuer = "fintrack",
+        ValidAudience = "fintrack",
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+        RoleClaimType = "role",
+        NameClaimType = "sub",
+        ClockSkew = TimeSpan.FromMinutes(1),
+    };
+});
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
+    .AddPolicy("FamilyAdmin", policy => policy.RequireRole(nameof(UserRole.FamilyAdmin)));
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+    options.AddPolicy("suggestions", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("sub")?.Value ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
+});
+builder.Services.AddSingleton<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
+builder.Services.AddScoped<SuggestCategoryUseCase>();
+builder.Services.AddHttpClient<ITransactionCategorizer, OpenAiTransactionCategorizer>(
+    client => client.Timeout = TimeSpan.FromSeconds(10));
 builder.Services.AddControllers();
 
 var app = builder.Build();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
+app.MapAuthEndpoints();
+app.MapCategorizationEndpoints();
 
-app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
 app.MapGet("/api/categories", async (FinanceDbContext db, CancellationToken cancellationToken) =>
 {
@@ -184,6 +236,7 @@ app.MapPut("/api/budgets/{categoryId}", async (
 
 app.MapPost("/api/transactions", async (
     CreateTransactionRequest request,
+    ClaimsPrincipal principal,
     FinanceDbContext db,
     CancellationToken cancellationToken) =>
 {
@@ -210,6 +263,15 @@ app.MapPost("/api/transactions", async (
         });
     }
 
+    if (principal.UserId() is not { } userId) return Results.Unauthorized();
+
+    var (suggestionError, categorySource) = await CategorizationEndpoints.ResolveSuggestionAsync(
+        db, request.SuggestionId, userId, request.CategoryId, cancellationToken);
+    if (suggestionError is not null)
+    {
+        return Results.ValidationProblem(new Dictionary<string, string[]> { ["suggestionId"] = [suggestionError] });
+    }
+
     var transaction = new Transaction
     {
         Id = Guid.NewGuid(),
@@ -218,6 +280,9 @@ app.MapPost("/api/transactions", async (
         Amount = request.Amount,
         Date = request.Date,
         CreatedAtUtc = DateTimeOffset.UtcNow,
+        CreatedByUserId = userId,
+        CategorySource = categorySource,
+        SuggestionId = categorySource == "AiApproved" ? request.SuggestionId : null,
     };
 
     db.Transactions.Add(transaction);
@@ -247,4 +312,5 @@ public sealed record CreateTransactionRequest(
     string? Title,
     string? CategoryId,
     decimal Amount,
-    DateOnly Date);
+    DateOnly Date,
+    Guid? SuggestionId = null);

@@ -2,16 +2,18 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { getLocalDateString } from '../data';
 import type { Category } from '../types';
+import { SuggestionPanel } from './SuggestionPanel';
 
 export function TransactionModal({ categories, onClose, onAdd }: {
   categories: Category[];
   onClose: () => void;
-  onAdd: (title: string, categoryId: string, amount: number, date: string) => Promise<void>;
+  onAdd: (title: string, categoryId: string, amount: number, date: string, suggestionId?: string) => Promise<void>;
 }) {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(getLocalDateString());
+  const [suggestionId, setSuggestionId] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +25,7 @@ export function TransactionModal({ categories, onClose, onAdd }: {
     setIsSubmitting(true);
     setError(null);
     try {
-      await onAdd(normalizedTitle, categoryId, value, date);
+      await onAdd(normalizedTitle, categoryId, value, date, suggestionId);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'A kiadás mentése nem sikerült.');
     } finally {
@@ -41,6 +43,12 @@ export function TransactionModal({ categories, onClose, onAdd }: {
         <label>Összeg (Ft)<input type="number" min="1" step="1" required value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0" /></label>
         <label>Dátum<input type="date" required value={date} onChange={(event) => setDate(event.target.value)} /></label>
         {error && <p className="inline-error" role="alert">{error}</p>}
+        <SuggestionPanel
+          amount={amount}
+          categories={categories}
+          onApply={(id, suggestion) => { setCategoryId(id); setSuggestionId(suggestion); }}
+          title={title}
+        />
         <button className="primary wide" disabled={isSubmitting || !categories.length || !title.trim() || Number(amount) <= 0} type="submit">{isSubmitting ? 'Mentés…' : 'Kiadás mentése'}</button>
       </form>
     </Modal>

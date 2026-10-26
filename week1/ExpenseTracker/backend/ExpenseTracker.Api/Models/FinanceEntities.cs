@@ -18,6 +18,9 @@ public sealed class Transaction
     public decimal Amount { get; set; }
     public DateOnly Date { get; set; }
     public DateTimeOffset CreatedAtUtc { get; set; }
+    public Guid? CreatedByUserId { get; set; }
+    public string CategorySource { get; set; } = "Manual";
+    public Guid? SuggestionId { get; set; }
     public Category Category { get; set; } = null!;
 }
 
