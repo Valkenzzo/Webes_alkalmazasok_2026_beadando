@@ -19,7 +19,7 @@ export default function App() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [authChecked, setAuthChecked] = useState(!hasToken());
+  const [authChecked, setAuthChecked] = useState(!hasToken()); 
 
   useEffect(() => {
     setUnauthorizedHandler(() => setUser(null));
