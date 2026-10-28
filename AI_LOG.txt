@@ -59,3 +59,11 @@ npm run dev
 - Frontend: bejelentkezési képernyő, AI javaslat panel a kiadásűrlapban (elfogadás, felülbírálás, jóváhagyásra küldés), Jóváhagyások oldal csak adminnak, kijelentkezés.
 - Új EF migráció: AddAuthAndCategorySuggestions (felhasználók, javaslatok, tranzakció új mezői); a PostgreSQL-en lefutott.
 - Ellenőrzés: backend tesztek 14/14, frontend build sikeres; futó API-n token nélkül és hibás tokennel a védett végpontok 401-et adnak. Nem ellenőriztem: valós OpenAI-hívás (nincs API-kulcs megadva), bejelentkezés és admin/tag jogosultság HTTP-n (ehhez az éles adatbázisban admin fiókot kellett volna létrehozni), valamint a böngészős felület kézi végigpróbálása.
+
+## Ingyenes helyi AI-kategorizálás – 2026-10-28
+- Az új kiadás űrlap alapértelmezés szerint AI-javaslat módot használ; a név és összeg megadása után a javaslat automatikusan lekérődik, fix kategória választásakor nincs AI-hívás.
+- Az OpenAI-alapú adapter helyett az API Ollama helyi szolgáltatáshoz csatlakozik (`http://localhost:11434`), API-kulcs és külső AI-szolgáltatás nélkül. A `qwen2.5:3b` Tesco-bevásárlásra nem adott megbízható kategóriát, ezért letöltöttük a nagyobb `qwen2.5:7b` modellt.
+- A helyi modell promptja pontosította a meglévő kategóriák használatát (például Tesco/bevásárlás → Élelmiszer), alacsonyabb hőmérsékletet és kimeneti korlátot kapott. Ha a modell `new_category` kimenet mellett egy létező kategóriaazonosítót ad, a szerver a meglévő kategóriát kezeli javaslatként.
+- Az Ollama hiánya, a hiányzó modell, timeout és hibás válasz felhasználó számára érthető hibaüzenetet ad. Az adatbázis-, API- és frontend kód továbbra is megköveteli a bejelentkezést.
+- A README frissült az Ollama telepítésével, modellletöltésével és helyi használatával.
+- Ellenőrzés: Ollama `qwen2.5:7b` próbahívás Tesco-bevásárlásra `food` kategóriát adott; backend tesztek 17/17 sikeresek, frontend production build sikeres. A FinTrack API health és a Vite frontend HTTP 200 választ adott.

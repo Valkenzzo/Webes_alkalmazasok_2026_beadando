@@ -21,17 +21,23 @@ dotnet run
 
 Az API a `http://localhost:5180` címen indul. A migráció létrehozza a kategória-, tranzakció- és kerettáblákat, valamint az alapértelmezett kategóriákat és költségkereteket.
 
-## Bejelentkezés és AI-kategorizálás
+## Bejelentkezés és ingyenes helyi AI-kategorizálás
 Az API JWT-bejelentkezést használ (szerepkörök: Felhasználó, Családi admin). A titkokat User Secretsben kell megadni, forrásfájlba nem kerülhetnek:
 
 ```powershell
 cd week1/ExpenseTracker/backend/ExpenseTracker.Api
 dotnet user-secrets set "Jwt:SigningKey" "<legalább 32 karakteres véletlen érték>"
-dotnet user-secrets set "OpenAI:ApiKey" "<OpenAI API-kulcs>"
-dotnet user-secrets set "OpenAI:Model" "gpt-4o-mini"
 ```
 
-Az első megnyitáskor a felület az első Családi admin létrehozását kéri; további tagokat az admin hoz létre a Jóváhagyások oldalon. Az OpenAI-kulcs nélkül a javaslat „nem érhető el” állapotot jelez, a kézi könyvelés ettől függetlenül működik. Az AI csak meglévő kategóriát javasolhat; új kategória csak Családi admin jóváhagyásával jön létre, és a könyvelést mindig a felhasználó hagyja jóvá. Az OpenAI-nak csak a tranzakció neve és összege megy ki.
+Az első megnyitáskor a felület az első Családi admin létrehozását kéri; további tagokat az admin hoz létre a Jóváhagyások oldalon.
+
+Az ingyenes AI-javaslatokhoz telepítsd az [Ollamát](https://ollama.com/download), majd töltsd le a helyi modellt:
+
+```powershell
+ollama pull qwen2.5:7b
+```
+
+Az Ollama helyben, `http://localhost:11434` címen szolgálja ki a modellt; az alkalmazás nem küld kiadási adatokat OpenAI-nak, és nem igényel API-kulcsot. A modell letöltése több GB lemezterületet és a futtatása számítási erőforrást igényel. Más modell vagy Ollama-cím a `Ollama:Model` és `Ollama:BaseUrl` konfigurációs értékekkel állítható. Az AI csak létező kategóriát javasolhat; új kategória csak Családi admin jóváhagyásával jön létre, a könyvelést pedig mindig a felhasználó hagyja jóvá.
 
 ## Frontend indítása
 Másik terminálban, a projekt könyvtárában:

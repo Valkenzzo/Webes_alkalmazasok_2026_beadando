@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading.RateLimiting;
 using ExpenseTracker.Api.Application.Categorization;
 using ExpenseTracker.Api.Endpoints;
-using ExpenseTracker.Api.Infrastructure.OpenAi;
+using ExpenseTracker.Api.Infrastructure.Ollama;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -62,8 +62,8 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.Services.AddSingleton<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 builder.Services.AddScoped<SuggestCategoryUseCase>();
-builder.Services.AddHttpClient<ITransactionCategorizer, OpenAiTransactionCategorizer>(
-    client => client.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddHttpClient<ITransactionCategorizer, OllamaTransactionCategorizer>(
+    client => client.Timeout = TimeSpan.FromSeconds(120));
 builder.Services.AddControllers();
 
 var app = builder.Build();

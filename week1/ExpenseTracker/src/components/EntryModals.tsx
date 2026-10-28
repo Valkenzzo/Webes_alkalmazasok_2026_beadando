@@ -4,24 +4,42 @@ import { getLocalDateString } from '../data';
 import type { Category } from '../types';
 import { SuggestionPanel } from './SuggestionPanel';
 
+const aiSuggestionOption = '__ai_suggestion__';
+
 export function TransactionModal({ categories, onClose, onAdd }: {
   categories: Category[];
   onClose: () => void;
   onAdd: (title: string, categoryId: string, amount: number, date: string, suggestionId?: string) => Promise<void>;
 }) {
   const [title, setTitle] = useState('');
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '');
+  const [categoryId, setCategoryId] = useState(aiSuggestionOption);
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(getLocalDateString());
   const [suggestionId, setSuggestionId] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function updateTitle(value: string) {
+    setTitle(value);
+    if (suggestionId) {
+      setSuggestionId(undefined);
+      setCategoryId(aiSuggestionOption);
+    }
+  }
+
+  function updateAmount(value: string) {
+    setAmount(value);
+    if (suggestionId) {
+      setSuggestionId(undefined);
+      setCategoryId(aiSuggestionOption);
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedTitle = title.trim();
     const value = Number(amount);
-    if (!normalizedTitle || !categoryId || !Number.isFinite(value) || value <= 0) return;
+    if (!normalizedTitle || !categoryId || categoryId === aiSuggestionOption || !Number.isFinite(value) || value <= 0) return;
     setIsSubmitting(true);
     setError(null);
     try {
@@ -36,20 +54,23 @@ export function TransactionModal({ categories, onClose, onAdd }: {
   return (
     <Modal title="Új kiadás" onClose={onClose}>
       <form onSubmit={submit}>
-        <label>Megnevezés<input autoFocus maxLength={80} required value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Pl. Bevásárlás" /></label>
-        <label>Kategória<select required value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+        <label>Megnevezés<input autoFocus maxLength={80} required value={title} onChange={(event) => updateTitle(event.target.value)} placeholder="Pl. Bevásárlás" /></label>
+        <label>Kategória<select required value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setSuggestionId(undefined); }}>
+          <option value={aiSuggestionOption}>AI javaslat (automatikus)</option>
           {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
         </select></label>
-        <label>Összeg (Ft)<input type="number" min="1" step="1" required value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0" /></label>
+        <label>Összeg (Ft)<input type="number" min="1" step="1" required value={amount} onChange={(event) => updateAmount(event.target.value)} placeholder="0" /></label>
         <label>Dátum<input type="date" required value={date} onChange={(event) => setDate(event.target.value)} /></label>
         {error && <p className="inline-error" role="alert">{error}</p>}
-        <SuggestionPanel
-          amount={amount}
-          categories={categories}
-          onApply={(id, suggestion) => { setCategoryId(id); setSuggestionId(suggestion); }}
-          title={title}
-        />
-        <button className="primary wide" disabled={isSubmitting || !categories.length || !title.trim() || Number(amount) <= 0} type="submit">{isSubmitting ? 'Mentés…' : 'Kiadás mentése'}</button>
+        {categoryId === aiSuggestionOption && (
+          <SuggestionPanel
+            amount={amount}
+            categories={categories}
+            onApply={(id, suggestion) => { setCategoryId(id); setSuggestionId(suggestion); }}
+            title={title}
+          />
+        )}
+        <button className="primary wide" disabled={isSubmitting || !categories.length || !title.trim() || categoryId === aiSuggestionOption || Number(amount) <= 0} type="submit">{isSubmitting ? 'Mentés…' : 'Kiadás mentése'}</button>
       </form>
     </Modal>
   );

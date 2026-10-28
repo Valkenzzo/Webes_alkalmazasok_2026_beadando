@@ -27,7 +27,7 @@ public sealed class OpenAiTransactionCategorizer(
         var apiKey = config["OpenAI:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            throw new CategorizerUnavailableException("OpenAI API key is not configured.");
+            throw new CategorizerUnavailableException("A backendben nincs beállítva az OpenAI API-kulcs.");
         }
 
         var schema = new Dictionary<string, object?>
@@ -77,7 +77,7 @@ public sealed class OpenAiTransactionCategorizer(
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning("OpenAI categorization failed with HTTP {Status}", (int)response.StatusCode);
-                throw new CategorizerUnavailableException($"OpenAI returned HTTP {(int)response.StatusCode}.");
+                throw new CategorizerUnavailableException(GetHttpErrorMessage(response.StatusCode));
             }
 
             using var document = await JsonDocument.ParseAsync(
@@ -86,30 +86,40 @@ public sealed class OpenAiTransactionCategorizer(
             var choice = document.RootElement.GetProperty("choices")[0];
             if (choice.GetProperty("finish_reason").GetString() != "stop")
             {
-                throw new CategorizerUnavailableException("The model response was incomplete.");
+                throw new CategorizerUnavailableException("Az AI válasza hiányos volt. Próbáld újra.");
             }
 
             var content = choice.GetProperty("message").GetProperty("content").GetString();
             if (string.IsNullOrWhiteSpace(content))
             {
-                throw new CategorizerUnavailableException("The model response was empty or refused.");
+                throw new CategorizerUnavailableException("Az AI nem adott használható választ. Próbáld újra.");
             }
 
             return JsonSerializer.Deserialize<RawSuggestion>(content, Json)
-                ?? throw new CategorizerUnavailableException("The model response was not valid.");
+                ?? throw new CategorizerUnavailableException("Az AI válasza nem volt értelmezhető.");
         }
         catch (HttpRequestException ex)
         {
-            throw new CategorizerUnavailableException("OpenAI could not be reached.", ex);
+            throw new CategorizerUnavailableException("Nem sikerült elérni az OpenAI szolgáltatást. Ellenőrizd az internetkapcsolatot.", ex);
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new CategorizerUnavailableException("OpenAI timed out.", ex);
+            throw new CategorizerUnavailableException("Az OpenAI szolgáltatás túllépte az időkorlátot. Próbáld újra.", ex);
         }
         catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
         {
             logger.LogWarning(ex, "OpenAI returned an unexpected payload");
-            throw new CategorizerUnavailableException("The model response was not valid.", ex);
+            throw new CategorizerUnavailableException("Az AI válasza nem volt értelmezhető.", ex);
         }
     }
+
+    private static string GetHttpErrorMessage(System.Net.HttpStatusCode statusCode) =>
+        statusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => "Az OpenAI API-kulcs érvénytelen vagy vissza lett vonva.",
+            System.Net.HttpStatusCode.Forbidden => "Az OpenAI API-kulcsnak nincs jogosultsága ehhez a modellhez.",
+            System.Net.HttpStatusCode.TooManyRequests => "Az OpenAI használati korlátja vagy egyenlege elfogyott.",
+            var status when (int)status >= 500 => "Az OpenAI szolgáltatás átmenetileg hibát jelez.",
+            _ => $"Az OpenAI API hibát jelzett (HTTP {(int)statusCode}).",
+        };
 }

@@ -41,9 +41,9 @@ public sealed class SuggestCategoryUseCase(ITransactionCategorizer categorizer)
         {
             raw = await categorizer.CategorizeAsync(title, amount, categories, cancellationToken);
         }
-        catch (CategorizerUnavailableException)
+        catch (CategorizerUnavailableException exception)
         {
-            return new(SuggestionOutcome.Unavailable, null, null, 0, "A javaslat jelenleg nem érhető el.");
+            return new(SuggestionOutcome.Unavailable, null, null, 0, exception.Message);
         }
 
         return Validate(raw, categories);
@@ -67,6 +67,12 @@ public sealed class SuggestCategoryUseCase(ITransactionCategorizer categorizer)
                     : uncertain;
             case "new_category":
             {
+                var existingId = categories.FirstOrDefault(category => category.Id == raw.CategoryId);
+                if (existingId is not null)
+                {
+                    return new(SuggestionOutcome.Match, existingId.Id, null, confidence, reason);
+                }
+
                 var name = raw.ProposedCategoryName?.Trim();
                 if (string.IsNullOrEmpty(name) || name.Length > MaxNameLength) return uncertain;
 
