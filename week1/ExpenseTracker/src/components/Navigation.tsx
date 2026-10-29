@@ -30,7 +30,7 @@ export function Navigation({ activePage, onNavigate, user, onLogout }: Navigatio
     <aside className="sidebar">
       <div className="brand">
         <div className="logo"><CircleDollarSign size={23} /></div>
-        <span>FinTrack</span>
+        <span>ExpenseTracker</span>
       </div>
       <nav aria-label="Fő navigáció">
         {pages.filter(({ id }) => id !== 'approvals' || user.role === 'FamilyAdmin').map(({ id, label, icon: Icon }) => (
