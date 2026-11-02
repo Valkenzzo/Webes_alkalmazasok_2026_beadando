@@ -34,7 +34,7 @@ Az első megnyitáskor a felület az első Családi admin létrehozását kéri;
 Az ingyenes AI-javaslatokhoz telepítsd az [Ollamát](https://ollama.com/download), majd töltsd le a helyi modellt:
 
 ```powershell
-ollama pull qwen2.5:7b
+ollama pull qwen3:14b
 ```
 
 Az Ollama helyben, `http://localhost:11434` címen szolgálja ki a modellt; az alkalmazás nem küld kiadási adatokat OpenAI-nak, és nem igényel API-kulcsot. A modell letöltése több GB lemezterületet és a futtatása számítási erőforrást igényel. Más modell vagy Ollama-cím a `Ollama:Model` és `Ollama:BaseUrl` konfigurációs értékekkel állítható. Az AI csak létező kategóriát javasolhat; új kategória csak Családi admin jóváhagyásával jön létre, a könyvelést pedig mindig a felhasználó hagyja jóvá.

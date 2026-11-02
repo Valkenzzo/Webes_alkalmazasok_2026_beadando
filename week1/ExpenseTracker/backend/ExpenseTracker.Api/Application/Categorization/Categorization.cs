@@ -57,33 +57,20 @@ public sealed class SuggestCategoryUseCase(ITransactionCategorizer categorizer)
         if (reason.Length > 200) reason = reason[..200];
 
         var uncertain = new SuggestionResult(SuggestionOutcome.Uncertain, null, null, confidence, reason);
-        if (confidence < MinConfidence) return uncertain;
+        var other = categories.FirstOrDefault(category => category.Id == "other");
+        var fallback = other is null
+            ? uncertain
+            : new SuggestionResult(
+                SuggestionOutcome.Match,
+                other.Id,
+                null,
+                confidence,
+                "Nem sikerült egyértelműen besorolni; javaslat: Egyéb.");
 
-        switch (raw.Outcome)
-        {
-            case "match":
-                return categories.Any(category => category.Id == raw.CategoryId)
-                    ? new(SuggestionOutcome.Match, raw.CategoryId, null, confidence, reason)
-                    : uncertain;
-            case "new_category":
-            {
-                var existingId = categories.FirstOrDefault(category => category.Id == raw.CategoryId);
-                if (existingId is not null)
-                {
-                    return new(SuggestionOutcome.Match, existingId.Id, null, confidence, reason);
-                }
+        if (confidence < MinConfidence || raw.Outcome != "match") return fallback;
 
-                var name = raw.ProposedCategoryName?.Trim();
-                if (string.IsNullOrEmpty(name) || name.Length > MaxNameLength) return uncertain;
-
-                var existing = categories.FirstOrDefault(
-                    category => string.Equals(category.Name, name, StringComparison.OrdinalIgnoreCase));
-                return existing is null
-                    ? new(SuggestionOutcome.NewCategory, null, name, confidence, reason)
-                    : new(SuggestionOutcome.Match, existing.Id, null, confidence, reason);
-            }
-            default:
-                return uncertain;
-        }
+        return categories.Any(category => category.Id == raw.CategoryId)
+            ? new(SuggestionOutcome.Match, raw.CategoryId, null, confidence, reason)
+            : fallback;
     }
 }

@@ -12,7 +12,8 @@ namespace ExpenseTracker.Api.Tests;
 
 public sealed class CategorizationTests
 {
-    private static readonly CategoryOption[] Categories = [new("food", "Élelmiszer"), new("housing", "Lakhatás")];
+    private static readonly CategoryOption[] Categories =
+        [new("food", "Élelmiszer"), new("housing", "Lakhatás"), new("other", "Egyéb")];
 
     [Fact]
     public void Validate_AcceptsExistingCategory()
@@ -24,59 +25,34 @@ public sealed class CategorizationTests
     }
 
     [Fact]
-    public void Validate_RejectsCategoryIdTheModelMadeUp()
+    public void Validate_MapsUnknownCategoryIdToOther()
     {
         var result = SuggestCategoryUseCase.Validate(new("match", "invented", null, 0.99, "ok"), Categories);
 
-        Assert.Equal(SuggestionOutcome.Uncertain, result.Outcome);
-        Assert.Null(result.CategoryId);
+        Assert.Equal(SuggestionOutcome.Match, result.Outcome);
+        Assert.Equal("other", result.CategoryId);
     }
 
     [Fact]
-    public void Validate_RejectsLowConfidence()
+    public void Validate_MapsLowConfidenceToOther()
     {
         var result = SuggestCategoryUseCase.Validate(new("match", "food", null, 0.3, "ok"), Categories);
 
-        Assert.Equal(SuggestionOutcome.Uncertain, result.Outcome);
-    }
-
-    [Fact]
-    public void Validate_ProposesUnknownCategoryWithoutCreatingIt()
-    {
-        var result = SuggestCategoryUseCase.Validate(new("new_category", null, "Hobbi", 0.8, "ok"), Categories);
-
-        Assert.Equal(SuggestionOutcome.NewCategory, result.Outcome);
-        Assert.Equal("Hobbi", result.ProposedCategoryName);
-        Assert.Null(result.CategoryId);
-    }
-
-    [Fact]
-    public void Validate_MapsProposedNameOfExistingCategoryToMatch()
-    {
-        var result = SuggestCategoryUseCase.Validate(new("new_category", null, "élelmiszer", 0.8, "ok"), Categories);
-
         Assert.Equal(SuggestionOutcome.Match, result.Outcome);
-        Assert.Equal("food", result.CategoryId);
+        Assert.Equal("other", result.CategoryId);
+        Assert.Contains("Egyéb", result.Reason);
     }
 
     [Fact]
-    public void Validate_UsesExistingCategoryIdWhenModelAlsoReturnsNewCategory()
+    public void Validate_MapsAttemptToProposeNewCategoryToOther()
     {
         var result = SuggestCategoryUseCase.Validate(
-            new("new_category", "food", "Bevásárlás", 0.9, "A kategória már létezik."),
+            new("new_category", null, "Hobbi", 0.9, "Nincs megfelelő kategória."),
             Categories);
 
         Assert.Equal(SuggestionOutcome.Match, result.Outcome);
-        Assert.Equal("food", result.CategoryId);
+        Assert.Equal("other", result.CategoryId);
         Assert.Null(result.ProposedCategoryName);
-    }
-
-    [Fact]
-    public void Validate_RejectsTooLongProposedName()
-    {
-        var result = SuggestCategoryUseCase.Validate(new("new_category", null, new string('x', 41), 0.9, "ok"), Categories);
-
-        Assert.Equal(SuggestionOutcome.Uncertain, result.Outcome);
     }
 
     [Fact]
@@ -145,7 +121,7 @@ public sealed class CategorizationTests
             OllamaAdapter(HttpStatusCode.NotFound, "{}")
                 .CategorizeAsync("t", 1m, Categories, CancellationToken.None));
 
-        Assert.Contains("qwen2.5:3b", error.Message);
+        Assert.Contains("qwen3:14b", error.Message);
     }
 
     private static string Completion(string finishReason, string content) =>
