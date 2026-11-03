@@ -67,3 +67,12 @@ npm run dev
 - Az Ollama hiánya, a hiányzó modell, timeout és hibás válasz felhasználó számára érthető hibaüzenetet ad. Az adatbázis-, API- és frontend kód továbbra is megköveteli a bejelentkezést.
 - A README frissült az Ollama telepítésével, modellletöltésével és helyi használatával.
 - Ellenőrzés: Ollama `qwen2.5:7b` próbahívás Tesco-bevásárlásra `food` kategóriát adott; backend tesztek 17/17 sikeresek, frontend production build sikeres. A FinTrack API health és a Vite frontend HTTP 200 választ adott.
+
+## Többfelhasználós működés – 2026-11-03
+- A tranzakciólista most a bejelentkezett felhasználó azonosítója szerint szűr; az új tranzakciók létrehozója eddig is rögzült, a régebbi, felhasználó nélküli tranzakciókat az első családi adminhoz rendeli a rendszer.
+- A havi költségkeretek felhasználónként külön mentődnek. A korábbi alapértelmezett keretek megmaradnak kezdőértékként, amíg az adott felhasználó saját keretet nem állít be; a kategóriák továbbra is közösek.
+- Az új `AddPersonalBudgets` EF Core migráció létrehozza a személyes keretek tábláját, valamint a tranzakciók felhasználó-kapcsolatát és indexét.
+- Az admin Jóváhagyások oldaláról eltűnt az új AI-kategória javaslatok listája és elbírálása; a családtag-fiókok létrehozása megmaradt. Az AI kategóriajavaslatait továbbra is a felhasználó hagyja jóvá.
+- Kijelentkezéskor és jogosulatlan válasz esetén a pénzügyi adatok törlődnek a frontend memóriájából, hogy fiókváltáskor ne jelenjenek meg az előző felhasználó adatai.
+- A README a többfelhasználós működéshez igazodott.
+- Ellenőrzés: frontend production build sikeres, backend build sikeres, backend tesztek 15/15 sikeresek, EF modellhez nincs függő migrációs eltérés. A `AddPersonalBudgets` migráció a helyi PostgreSQL-adatbázison lefutott; az API health és auth status végpontjai HTTP 200 választ adtak.
