@@ -22,10 +22,19 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(!hasToken()); 
 
   useEffect(() => {
-    setUnauthorizedHandler(() => setUser(null));
+    setUnauthorizedHandler(() => {
+      setUser(null);
+      clearFinanceData();
+    });
     if (!hasToken()) return;
     getMe().then(setUser).catch(() => setToken(null)).finally(() => setAuthChecked(true));
   }, []);
+
+  function clearFinanceData() {
+    setFinanceData({ transactions: [], categories: [], budgets: [] });
+    setIsLoading(true);
+    setLoadError(null);
+  }
 
   const categorySpend = useMemo(
     () => getCategorySpend(financeData.categories, financeData.transactions),
@@ -88,7 +97,7 @@ export default function App() {
   function logout() {
     setToken(null);
     setUser(null);
-    setFinanceData({ transactions: [], categories: [], budgets: [] });
+    clearFinanceData();
     setActivePage('dashboard');
   }
 
@@ -144,9 +153,7 @@ export default function App() {
           />
         )}
         {activePage === 'approvals' && user.role === 'FamilyAdmin' && (
-          <ApprovalsView
-            onApproved={(category) => setFinanceData((current) => ({ ...current, categories: [...current.categories, category] }))}
-          />
+          <ApprovalsView />
         )}
       </main>
 

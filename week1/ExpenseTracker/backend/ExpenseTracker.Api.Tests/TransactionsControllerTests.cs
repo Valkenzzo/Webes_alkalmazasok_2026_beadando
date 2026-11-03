@@ -1,7 +1,9 @@
+using System.Security.Claims;
 using ExpenseTracker.Api.Application.Transactions;
 using ExpenseTracker.Api.Controllers;
 using ExpenseTracker.Api.Controllers.Contracts;
 using ExpenseTracker.Api.Domain;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
@@ -12,6 +14,7 @@ public sealed class TransactionsControllerTests
     [Fact]
     public async Task Get_ReturnsTwoMappedTransactionsAsOk()
     {
+        var userId = Guid.Parse("a32d963a-6b63-49bb-b769-05e948cf3f16");
         var startedAt = new DateTimeOffset(2026, 10, 18, 10, 30, 0, TimeSpan.Zero);
         var service = new StubTransactionService(
         [
@@ -19,6 +22,7 @@ public sealed class TransactionsControllerTests
             new Transaction(Guid.Parse("2f1a2c9d-88d6-4f18-a2d0-9e5e1a7b3c40"), "housing", 185000m, "HUF", startedAt.AddDays(-1), "Havi albérlet"),
         ]);
         var controller = new TransactionsController(service);
+        SetUser(controller, userId);
 
         var action = await controller.Get(CancellationToken.None);
 
@@ -31,12 +35,15 @@ public sealed class TransactionsControllerTests
         Assert.Equal("HUF", response[0].Currency);
         Assert.Equal("2026-10-18T10:30:00.0000000Z", response[0].StartedAt);
         Assert.Equal("Bevásárlás", response[0].Description);
+        Assert.Equal(userId, service.UserId);
     }
 
     [Fact]
     public async Task Get_ReturnsOkWithEmptyArrayWhenNoTransactionsExist()
     {
+        var userId = Guid.Parse("a32d963a-6b63-49bb-b769-05e948cf3f16");
         var controller = new TransactionsController(new StubTransactionService([]));
+        SetUser(controller, userId);
 
         var action = await controller.Get(CancellationToken.None);
 
@@ -45,9 +52,37 @@ public sealed class TransactionsControllerTests
         Assert.Empty(response);
     }
 
+    [Fact]
+    public async Task Get_ReturnsUnauthorizedWithoutUserId()
+    {
+        var controller = new TransactionsController(new StubTransactionService([]));
+        SetUser(controller, new ClaimsPrincipal());
+
+        var action = await controller.Get(CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(action.Result);
+    }
+
+    private static ClaimsPrincipal PrincipalFor(Guid userId) =>
+        new(new ClaimsIdentity([new Claim("sub", userId.ToString())], "test"));
+
+    private static void SetUser(TransactionsController controller, Guid userId) =>
+        SetUser(controller, PrincipalFor(userId));
+
+    private static void SetUser(TransactionsController controller, ClaimsPrincipal principal) =>
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = principal },
+        };
+
     private sealed class StubTransactionService(IReadOnlyList<Transaction> transactions) : ITransactionService
     {
-        public Task<IReadOnlyList<Transaction>> ListTransactionsAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(transactions);
+        public Guid UserId { get; private set; }
+
+        public Task<IReadOnlyList<Transaction>> ListTransactionsAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            UserId = userId;
+            return Task.FromResult(transactions);
+        }
     }
 }

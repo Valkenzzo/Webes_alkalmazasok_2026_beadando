@@ -30,3 +30,12 @@ public sealed class Budget
     public decimal Limit { get; set; }
     public Category Category { get; set; } = null!;
 }
+
+public sealed class UserBudget
+{
+    public Guid UserId { get; set; }
+    public string CategoryId { get; set; } = string.Empty;
+    public decimal Limit { get; set; }
+    public AppUser User { get; set; } = null!;
+    public Category Category { get; set; } = null!;
+}

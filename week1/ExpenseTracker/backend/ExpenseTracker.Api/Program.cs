@@ -187,24 +187,45 @@ app.MapPost("/api/categories/import", async (
     return Results.Ok(new { imported });
 });
 
-app.MapGet("/api/budgets", async (FinanceDbContext db, CancellationToken cancellationToken) =>
+app.MapGet("/api/budgets", async (
+    ClaimsPrincipal principal,
+    FinanceDbContext db,
+    CancellationToken cancellationToken) =>
 {
-    var budgets = await db.Budgets
+    if (principal.UserId() is not { } userId) return Results.Unauthorized();
+
+    var limits = await db.Budgets
         .AsNoTracking()
-        .OrderBy(budget => budget.Category.SortOrder)
-        .ThenBy(budget => budget.Category.Name)
-        .Select(budget => new BudgetResponse(budget.CategoryId, budget.Limit))
+        .ToDictionaryAsync(budget => budget.CategoryId, budget => budget.Limit, cancellationToken);
+    var personalBudgets = await db.UserBudgets
+        .AsNoTracking()
+        .Where(budget => budget.UserId == userId)
+        .ToListAsync(cancellationToken);
+    foreach (var budget in personalBudgets)
+    {
+        limits[budget.CategoryId] = budget.Limit;
+    }
+
+    var categories = await db.Categories
+        .AsNoTracking()
+        .OrderBy(category => category.SortOrder)
+        .ThenBy(category => category.Name)
         .ToListAsync(cancellationToken);
 
-    return Results.Ok(budgets);
+    return Results.Ok(categories
+        .Where(category => limits.ContainsKey(category.Id))
+        .Select(category => new BudgetResponse(category.Id, limits[category.Id])));
 });
 
 app.MapPut("/api/budgets/{categoryId}", async (
     string categoryId,
     UpdateBudgetRequest request,
+    ClaimsPrincipal principal,
     FinanceDbContext db,
     CancellationToken cancellationToken) =>
 {
+    if (principal.UserId() is not { } userId) return Results.Unauthorized();
+
     if (request.Limit <= 0 || request.Limit > 1_000_000_000)
     {
         return Results.ValidationProblem(new Dictionary<string, string[]>
@@ -219,11 +240,11 @@ app.MapPut("/api/budgets/{categoryId}", async (
         return Results.NotFound(new { error = "A kategória nem található." });
     }
 
-    var budget = await db.Budgets.FindAsync([categoryId], cancellationToken);
+    var budget = await db.UserBudgets.FindAsync([userId, categoryId], cancellationToken);
     if (budget is null)
     {
-        budget = new Budget { CategoryId = categoryId, Limit = request.Limit };
-        db.Budgets.Add(budget);
+        budget = new UserBudget { UserId = userId, CategoryId = categoryId, Limit = request.Limit };
+        db.UserBudgets.Add(budget);
     }
     else
     {

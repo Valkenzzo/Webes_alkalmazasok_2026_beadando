@@ -8,6 +8,7 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<Budget> Budgets => Set<Budget>();
+    public DbSet<UserBudget> UserBudgets => Set<UserBudget>();
     public DbSet<AppUser> Users => Set<AppUser>();
     public DbSet<CategorySuggestion> CategorySuggestions => Set<CategorySuggestion>();
 
@@ -41,6 +42,11 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
                 .WithMany(category => category.Transactions)
                 .HasForeignKey(transaction => transaction.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<AppUser>()
+                .WithMany()
+                .HasForeignKey(transaction => transaction.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(transaction => transaction.CreatedByUserId);
         });
 
         modelBuilder.Entity<AppUser>(entity =>
@@ -85,6 +91,21 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
                 new Budget { CategoryId = "transport", Limit = 30000 },
                 new Budget { CategoryId = "leisure", Limit = 25000 },
                 new Budget { CategoryId = "health", Limit = 20000 });
+        });
+
+        modelBuilder.Entity<UserBudget>(entity =>
+        {
+                entity.HasKey(budget => new { budget.UserId, budget.CategoryId });
+                entity.Property(budget => budget.CategoryId).HasMaxLength(64);
+                entity.Property(budget => budget.Limit).HasPrecision(18, 2);
+                entity.HasOne(budget => budget.User)
+                    .WithMany()
+                    .HasForeignKey(budget => budget.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(budget => budget.Category)
+                    .WithMany()
+                    .HasForeignKey(budget => budget.CategoryId)
+                    .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

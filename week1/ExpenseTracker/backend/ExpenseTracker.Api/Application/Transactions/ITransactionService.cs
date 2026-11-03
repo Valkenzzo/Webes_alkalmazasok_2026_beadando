@@ -4,5 +4,5 @@ namespace ExpenseTracker.Api.Application.Transactions;
 
 public interface ITransactionService
 {
-    Task<IReadOnlyList<Transaction>> ListTransactionsAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<Transaction>> ListTransactionsAsync(Guid userId, CancellationToken cancellationToken);
 }

@@ -47,6 +47,9 @@ public static class AuthEndpoints
 
             db.Users.Add(user);
             await db.SaveChangesAsync(ct);
+            await db.Transactions
+                .Where(transaction => transaction.CreatedByUserId == null)
+                .ExecuteUpdateAsync(update => update.SetProperty(transaction => transaction.CreatedByUserId, user.Id), ct);
             return Results.Ok(Issue(user, config));
         }).AllowAnonymous().RequireRateLimiting("auth");
 
@@ -66,6 +69,13 @@ public static class AuthEndpoints
                 || hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
             {
                 return Results.Json(new { error = "Hibás e-mail vagy jelszó." }, statusCode: StatusCodes.Status401Unauthorized);
+            }
+
+            if (user.Role == UserRole.FamilyAdmin)
+            {
+                await db.Transactions
+                    .Where(transaction => transaction.CreatedByUserId == null)
+                    .ExecuteUpdateAsync(update => update.SetProperty(transaction => transaction.CreatedByUserId, user.Id), ct);
             }
 
             return Results.Ok(Issue(user, config));

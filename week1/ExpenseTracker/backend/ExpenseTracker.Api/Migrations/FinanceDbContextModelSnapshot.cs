@@ -272,7 +272,29 @@ namespace ExpenseTracker.Api.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("CreatedByUserId");
+
                     b.ToTable("Transactions");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Api.Models.UserBudget", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CategoryId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<decimal>("Limit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("UserId", "CategoryId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("UserBudgets");
                 });
 
             modelBuilder.Entity("ExpenseTracker.Api.Models.Budget", b =>
@@ -305,7 +327,31 @@ namespace ExpenseTracker.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ExpenseTracker.Api.Models.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Api.Models.UserBudget", b =>
+                {
+                    b.HasOne("ExpenseTracker.Api.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ExpenseTracker.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ExpenseTracker.Api.Models.Category", b =>

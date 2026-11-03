@@ -1,6 +1,6 @@
 # FinTrack
 
-Magyar nyelvű kiadáskövető React + TypeScript + Vite felülettel és ASP.NET Core Web API háttérrel. A tranzakciók, kategóriák és havi költségkeretek PostgreSQL-adatbázisban tárolódnak. Az alkalmazás prototípus: nincs hitelesítés vagy többfelhasználós adatelkülönítés.
+Magyar nyelvű kiadáskövető React + TypeScript + Vite felülettel és ASP.NET Core Web API háttérrel. A tranzakciók, kategóriák és havi költségkeretek PostgreSQL-adatbázisban tárolódnak. Az alkalmazás több felhasználót kezel: a tranzakciók és havi keretek személyesek, a kategóriák családon belül közösek.
 
 ## Követelmények
 - Node.js és npm
@@ -22,14 +22,14 @@ dotnet run
 Az API a `http://localhost:5180` címen indul. A migráció létrehozza a kategória-, tranzakció- és kerettáblákat, valamint az alapértelmezett kategóriákat és költségkereteket.
 
 ## Bejelentkezés és ingyenes helyi AI-kategorizálás
-Az API JWT-bejelentkezést használ (szerepkörök: Felhasználó, Családi admin). A titkokat User Secretsben kell megadni, forrásfájlba nem kerülhetnek:
+Az API JWT-bejelentkezést használ (szerepkörök: Felhasználó, Családi admin). A korábbi, még felhasználóhoz nem rendelt tranzakciókat a családi admin első belépésekor az admin fiókjához rendeli. A titkokat User Secretsben kell megadni, forrásfájlba nem kerülhetnek:
 
 ```powershell
 cd week1/ExpenseTracker/backend/ExpenseTracker.Api
 dotnet user-secrets set "Jwt:SigningKey" "<legalább 32 karakteres véletlen érték>"
 ```
 
-Az első megnyitáskor a felület az első Családi admin létrehozását kéri; további tagokat az admin hoz létre a Jóváhagyások oldalon.
+Az első megnyitáskor a felület az első Családi admin létrehozását kéri; további tagokat az admin hoz létre a Jóváhagyások oldalon. Minden felhasználó csak a saját tranzakcióit és kereteit látja, a létrehozott kategóriák minden családtag számára elérhetők.
 
 Az ingyenes AI-javaslatokhoz telepítsd az [Ollamát](https://ollama.com/download), majd töltsd le a helyi modellt:
 
@@ -37,7 +37,7 @@ Az ingyenes AI-javaslatokhoz telepítsd az [Ollamát](https://ollama.com/downloa
 ollama pull qwen3:14b
 ```
 
-Az Ollama helyben, `http://localhost:11434` címen szolgálja ki a modellt; az alkalmazás nem küld kiadási adatokat OpenAI-nak, és nem igényel API-kulcsot. A modell letöltése több GB lemezterületet és a futtatása számítási erőforrást igényel. Más modell vagy Ollama-cím a `Ollama:Model` és `Ollama:BaseUrl` konfigurációs értékekkel állítható. Az AI csak létező kategóriát javasolhat; új kategória csak Családi admin jóváhagyásával jön létre, a könyvelést pedig mindig a felhasználó hagyja jóvá.
+Az Ollama helyben, `http://localhost:11434` címen szolgálja ki a modellt; az alkalmazás nem küld kiadási adatokat OpenAI-nak, és nem igényel API-kulcsot. A modell letöltése több GB lemezterületet és a futtatása számítási erőforrást igényel. Más modell vagy Ollama-cím a `Ollama:Model` és `Ollama:BaseUrl` konfigurációs értékekkel állítható. Az AI-kategóriajavaslatot minden esetben a felhasználó hagyja jóvá.
 
 ## Frontend indítása
 Másik terminálban, a projekt könyvtárában:
@@ -67,4 +67,4 @@ dotnet build backend/ExpenseTracker.Api
 npm run build
 ```
 
-Publikus vagy többfelhasználós telepítés előtt hitelesítést, felhasználónkénti adatelkülönítést és HTTPS-t kell hozzáadni.
+Publikus telepítés előtt használj HTTPS-t, biztonságos titokkezelést és rendszeres adatbázis-mentést.
