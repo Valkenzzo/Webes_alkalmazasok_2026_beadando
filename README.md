@@ -12,7 +12,7 @@ Magyar nyelvű kiadáskövető React + TypeScript + Vite felülettel és ASP.NET
 PowerShellben az API projekt könyvtárában állítsd be a helyi adatbázis kapcsolati adatait. A jelszó user secretsben tárolódik, nem a forráskódban:
 
 ```powershell
-cd week1/ExpenseTracker/backend/ExpenseTracker.Api
+cd backend/ExpenseTracker.Api
 dotnet user-secrets init
 dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=fintrack;Username=postgres;Password=SAJAT_HELYI_JELSZO"
 dotnet ef database update
@@ -25,7 +25,7 @@ Az API a `http://localhost:5180` címen indul. A migráció létrehozza a kateg�
 Az API JWT-bejelentkezést használ (szerepkörök: Felhasználó, Családi admin). A korábbi, még felhasználóhoz nem rendelt tranzakciókat a családi admin első belépésekor az admin fiókjához rendeli. A titkokat User Secretsben kell megadni, forrásfájlba nem kerülhetnek:
 
 ```powershell
-cd week1/ExpenseTracker/backend/ExpenseTracker.Api
+cd backend/ExpenseTracker.Api
 dotnet user-secrets set "Jwt:SigningKey" "<legalább 32 karakteres véletlen érték>"
 ```
 
@@ -40,10 +40,9 @@ ollama pull qwen3:14b
 Az Ollama helyben, `http://localhost:11434` címen szolgálja ki a modellt; az alkalmazás nem küld kiadási adatokat OpenAI-nak, és nem igényel API-kulcsot. A modell letöltése több GB lemezterületet és a futtatása számítási erőforrást igényel. Más modell vagy Ollama-cím a `Ollama:Model` és `Ollama:BaseUrl` konfigurációs értékekkel állítható. Az AI-kategóriajavaslatot minden esetben a felhasználó hagyja jóvá.
 
 ## Frontend indítása
-Másik terminálban, a projekt könyvtárában:
+Másik terminálban, a projekt gyökérkönyvtárában:
 
 ```powershell
-cd week1/ExpenseTracker
 npm install
 npm run dev
 ```
